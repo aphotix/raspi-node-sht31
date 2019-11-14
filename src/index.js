@@ -1,32 +1,31 @@
-'use strict';
 
-const Promise = require('bluebird');
 const commands = require('./commands');
 const utilities = require('./utilities');
+const i2c = require('i2c-bus');
 
 class SHT31 {
-  constructor(address, device){
+  constructor(address, device) {
     this.address = address || commands.DEFAULT_ADDR; // Addr is 0x44 unless you intentionally change it.
-    this.sensor = utilities.i2cBusPromiseWrapper(device || 1); // only the old pi uses 0
+    this.sensor = i2c.openSync(device || 1).promisifiedBus(); // only the old pi uses 0
     this.sensorData = Buffer.alloc(6); // Returns 6 bytes [temp,temp,checksum,humidity,humidity,checksum]
     this.statusData = Buffer.alloc(3); // Returns 3 bytes [data,data,checksum]
   }
 
   // the command is i2cWrite, the Async is added by bulk promisifying using Bluebird promisifyAll.
-  sendCommand(command){
+  sendCommand(command) {
     const cmd = Buffer.from([command >> 8, command & 0xFF]); // Commands are 16 bits, >> 8 will return the first 8 bits (left shift 8 bits), & 0xFF will get the last 8 bits.
-    return this.sensor.i2cWriteAsync(this.address, 2, cmd);
+    return this.sensor.i2cWrite(this.address, 2, cmd);
   }
 
-  readData(buffer){
-    return this.sensor.i2cReadAsync(this.address, buffer.length, buffer);
+  readData(buffer) {
+    return this.sensor.i2cRead(this.address, buffer.length, buffer);
   }
 
-  reset(){
+  reset() {
     return this.sendCommand(commands.CMD_RESET);
   }
 
-  readSensorData(){
+  readSensorData() {
     return this.sendCommand(commands.CMD_READ_SENSOR)
       .then( () => utilities.delay(15) )
       .then( () => this.readData(this.sensorData) )
@@ -35,13 +34,13 @@ class SHT31 {
         const data = [...this.sensorData];
         // check integrity
         const rawTemp = { data: data.slice(0,2), checksum: data[2] };
-        const rawHumid= { data: data.slice(3, 5), checksum: data[5] };
+        const rawHumid = { data: data.slice(3,5), checksum: data[5] };
 
-        if(rawTemp.checksum != utilities.checksum(rawTemp.data)){
+        if (rawTemp.checksum != utilities.checksum(rawTemp.data)) {
           return Promise.reject(new Error('Temperature Integrity Check Failed.'));
         }
 
-        if(rawHumid.checksum != utilities.checksum(rawHumid.data)){
+        if (rawHumid.checksum != utilities.checksum(rawHumid.data)) {
           return Promise.reject(new Error('Humidity Integrity Check Failed.'));
         }
 
@@ -53,13 +52,13 @@ class SHT31 {
       });
   }
 
-  getStatus(){
+  getStatus() {
     return this.sendCommand(commands.CMD_GET_STATUS)
       .then( () => this.readData(this.statusData) )
       .then( (bytesRead) => {
         const data = [...this.statusData];
 
-        if( data[2] != utilities.checksum(data.slice(0,2)) ){
+        if (data[2] != utilities.checksum(data.slice(0,2))) {
           return Promise.reject(new Error('Temperature Integrity Check Failed.'));
         }
 
@@ -79,7 +78,7 @@ class SHT31 {
 
   /* The heater is intended for plausibility testing only. It should increase
      the temperature by a few degress. (RH will be impacted as well.) */
-  enableHeater(duration){
+  enableHeater(duration) {
     const cmd = this.sendCommand(commands.CMD_HEATER_ON);
     if(duration){
       return cmd
@@ -90,10 +89,9 @@ class SHT31 {
     }
   }
 
-  disableHeater(){
+  disableHeater() {
     return this.sendCommand(commands.CMD_HEATER_OFF);
   }
-
 }
 
 module.exports = SHT31;

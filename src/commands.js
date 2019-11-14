@@ -1,4 +1,3 @@
-'use strict',
 
 module.exports = {
   CMD_READ_SENSOR: 0x2400,
