@@ -17,7 +17,6 @@ Read temperature and humidity from the SHT31 sensor on the Raspberry Pi using i2
 
 ## Dependancies
 * [i2c-bus](https://github.com/fivdi/i2c-bus)
-* [Bluebird](https://github.com/petkaantonov/bluebird/)
 
 ## Usage Example
 ```js
