@@ -4,9 +4,9 @@ const utilities = require('./utilities');
 const i2c = require('i2c-bus');
 
 class SHT31 {
-  constructor(address, device) {
+  constructor(address, device = 1) {
     this.address = address || commands.DEFAULT_ADDR; // Addr is 0x44 unless you intentionally change it.
-    this.sensor = i2c.openSync(device || 1).promisifiedBus(); // only the old pi uses 0
+    this.sensor = i2c.openSync(device).promisifiedBus(); // only the old pi uses 0
     this.sensorData = Buffer.alloc(6); // Returns 6 bytes [temp,temp,checksum,humidity,humidity,checksum]
     this.statusData = Buffer.alloc(3); // Returns 3 bytes [data,data,checksum]
   }
